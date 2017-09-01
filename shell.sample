@@ -1,0 +1,43 @@
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.dynamodb.DynamoDBItemWritable
+import org.apache.hadoop.dynamodb.read.DynamoDBInputFormat
+import org.apache.hadoop.hive.dynamodb.read.HiveDynamoDBInputFormat
+import org.apache.hadoop.dynamodb.write.DynamoDBOutputFormat
+import org.apache.hadoop.mapred.JobConf
+import org.apache.hadoop.io.LongWritable
+
+var jobConf = new JobConf(sc.hadoopConfiguration)
+jobConf.set("dynamodb.input.tableName", "test")
+jobConf.set("dynamodb.output.tableName", "testOutput")
+
+jobConf.set("mapred.output.format.class", "org.apache.hadoop.dynamodb.write.DynamoDBOutputFormat")
+jobConf.set("mapred.input.format.class", "org.apache.hadoop.dynamodb.read.DynamoDBInputFormat")
+
+import java.util.HashMap
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+
+var aryRDD = sc.parallelize(Array(("name3","value3"),("name4","value4")))
+
+
+var ddbInsertFormattedRDD = aryRDD.map( a => {
+  var ddbMap = new HashMap[String, AttributeValue]()
+
+  var itemKey = new AttributeValue()
+  itemKey.setS(a._1)
+  ddbMap.put("name",itemKey)
+
+  var itemValue = new AttributeValue()
+  itemValue.setS(a._2)
+  ddbMap.put("value",itemValue)
+
+  var item = new DynamoDBItemWritable()
+  item.setItem(ddbMap)
+ 
+  (new Text(""), item) 
+})
+
+ddbInsertFormattedRDD.saveAsHadoopDataset(jobConf)
+
+
+spark.sql("insert into ddbtable values ('name10','value10')")
+
